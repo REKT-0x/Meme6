@@ -1,1 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>$LE Meme Studio</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <style>
+        :root { --neon: #00ff88; --hotpink: #ff00ff; --cyan: #00ffff; }
+        
+        body { 
+            margin: 0; background-color: #050505;
+            background-image: linear-gradient(rgba(0, 255, 136, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 136, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+            color: white; font-family: 'Courier New', Courier, monospace;
+            display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+        }
+
+        #workspace { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; position: relative; overflow: hidden; }
+        
+        #sidebar { 
+            width: 100%; height: 45vh; background: rgba(10, 10, 10, 0.98); border-top: 3px solid var(--neon);
+            padding: 15px; overflow-y: auto; box-sizing: border-box; z-index: 20;
+        }
+
+        @media (min-width: 768px) {
+            body { flex-direction: row; }
+            #sidebar { width: 380px; height: 100vh; border-top: none; border-right: 3px solid var(--neon); }
+        }
+
+        .canvas-container { border: 2px solid var(--hotpink); box-shadow: 0 0 30px rgba(255, 0, 255, 0.2); max-width: 95vw !important; }
+
+        h1 { font-style: italic; color: var(--neon); text-shadow: 2px 2px var(--hotpink); text-align: center; font-size: 1.2rem; margin: 0 0 15px; }
+        
+        .input-row { display: flex; gap: 8px; margin-bottom: 12px; }
+        input[type="text"] { flex: 1; padding: 12px; border-radius: 6px; border: 1px solid var(--cyan); background: #000; color: white; outline: none; }
+        
+        .quick-add-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 15px; }
+        .btn-quick { background: #151515; color: var(--cyan); border: 1px solid var(--cyan); padding: 10px 2px; font-size: 10px; cursor: pointer; border-radius: 4px; font-weight: bold; }
+
+        .palette { display: flex; justify-content: space-between; margin-bottom: 15px; background: #000; padding: 8px; border-radius: 8px; }
+        .swatch { width: 35px; height: 35px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; }
+
+        .action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .btn { padding: 14px; border: none; font-weight: bold; cursor: pointer; border-radius: 6px; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }
+        .btn-x { background: #000; color: white; border: 1px solid white; grid-column: span 2; }
+        .btn-save { background: var(--hotpink); color: white; }
+        .btn-gallery { background: #333; color: white; border: 1px solid #666; }
+        .btn-clear { background: #222; color: #ff3e3e; font-size: 9px; grid-column: span 2; margin-top: 5px;}
+        
+        .thumb-scroll { display: flex; overflow-x: auto; gap: 10px; padding: 10px 0; border-top: 1px solid #222; margin-top: 15px; }
+        .thumb { height: 70px; border-radius: 4px; border: 1px solid transparent; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="workspace">
+        <h1>$LE MEME STUDIO</h1>
+        <canvas id="memeCanvas"></canvas>
+        <p style="font-size: 9px; color: var(--neon); margin-top: 10px; letter-spacing: 2px;">DRAG TO MOVE • DOUBLE TAP TO DELETE</p>
+    </div>
+
+    <div id="sidebar">
+        <div class="palette">
+            <div class="swatch" style="background: #ffffff;" onclick="setColor('#ffffff')"></div>
+            <div class="swatch" style="background: #00ff88;" onclick="setColor('#00ff88')"></div>
+            <div class="swatch" style="background: #ff00ff;" onclick="setColor('#ff00ff')"></div>
+            <div class="swatch" style="background: #00ffff;" onclick="setColor('#00ffff')"></div>
+            <div class="swatch" style="background: #ffff00;" onclick="setColor('#ffff00')"></div>
+            <div class="swatch" style="background: #ff3e3e;" onclick="setColor('#ff3e3e')"></div>
+        </div>
+
+        <div class="input-row">
+            <input type="text" id="textInput" placeholder="TYPE MEME TEXT...">
+            <button onclick="addCustomText()" style="background:var(--neon); border:none; padding:0 15px; border-radius:6px; font-weight:bold; color:#000;">ADD</button>
+        </div>
+        
+        <div class="quick-add-grid">
+            <button class="btn-quick" onclick="addCustomText('PUMP IT')">PUMP IT</button>
+            <button class="btn-quick" onclick="addCustomText('WAGMI')">WAGMI</button>
+            <button class="btn-quick" onclick="addCustomText('LFG')">LFG</button>
+            <button class="btn-quick" onclick="addCustomText('HODL')">HODL</button>
+            <button class="btn-quick" onclick="addCustomText('BULLISH')">BULLISH</button>
+            <button class="btn-quick" onclick="addCustomText('MOON')">MOON</button>
+        </div>
+
+        <div class="action-btns">
+            <button class="btn btn-x" onclick="shareToX()">SHARE TO X</button>
+            <button class="btn btn-save" onclick="downloadMeme()">SAVE PNG</button>
+            <button class="btn btn-gallery" onclick="document.getElementById('fileInput').click()">GALLERY</button>
+            <button class="btn btn-clear" onclick="clearText()">CLEAR ALL OVERLAYS</button>
+        </div>
+
+        <input type="file" id="fileInput" hidden accept="image/*" onchange="handleFileUpload(event)">
+        <div class="thumb-scroll" id="template-list"></div>
+    </div>
+
+    <script>
+        const canvas = new fabric.Canvas('memeCanvas', { allowTouchScrolling: true });
+        const DEFAULT_IMG = 'IMG_3663.jpeg'; 
+        const APE_LINK = "https://ape.express/explore/0x1f7ef975e14d3d9d8d0592e5040635026f4851e0";
+        let currentColor = '#ffffff';
+
+        window.onload = () => { loadMeme(DEFAULT_IMG); fetchTemplates(); };
+
+        function setColor(color) {
+            currentColor = color;
+            const active = canvas.getActiveObject();
+            if (active && active.type === 'i-text') {
+                active.set({ fill: color, shadow: new fabric.Shadow({ color: color, blur: 15 }) });
+                canvas.renderAll();
+            }
+        }
+
+        function loadMeme(url) {
+            fabric.Image.fromURL(url, function(img) {
+                const isMobile = window.innerWidth < 768;
+                const maxWidth = isMobile ? window.innerWidth - 30 : 700;
+                const maxHeight = isMobile ? window.innerHeight * 0.45 : 550;
+                
+                const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+                canvas.setDimensions({ width: img.width * ratio, height: img.height * ratio });
+                img.scale(ratio); img.set({ selectable: false, evented: false });
+                canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
+                
+                canvas.getObjects('i-text').forEach(obj => canvas.remove(obj));
+                addWatermark();
+            }, { crossOrigin: 'anonymous' });
+        }
+
+        function handleFileUpload(e) {
+            const reader = new FileReader();
+            reader.onload = function(event) { loadMeme(event.target.result); };
+            reader.readAsDataURL(e.target.files[0]);
+        }
+
+        function addWatermark() {
+            const wm = new fabric.Text('$LE', {
+                left: canvas.width - 12, top: 12, originX: 'right', fontFamily: 'Impact', fontSize: 24,
+                fill: '#00ff88', stroke: 'black', strokeWidth: 1, selectable: false, evented: false,
+                shadow: new fabric.Shadow({ color: '#00ff88', blur: 10 })
+            });
+            canvas.add(wm);
+        }
+
+        function addCustomText(over) {
+            const val = over || document.getElementById('textInput').value || "TEXT";
+            const text = new fabric.IText(val, {
+                left: canvas.width / 2, top: canvas.height / 2, originX: 'center',
+                fontFamily: 'Impact', fontSize: canvas.width / 10, fill: currentColor, stroke: 'black',
+                strokeWidth: 2, fontWeight: 'bold', textAlign: 'center',
+                shadow: new fabric.Shadow({ color: currentColor, blur: 15 })
+            });
+            canvas.add(text);
+            canvas.setActiveObject(text);
+            if(!over) document.getElementById('textInput').value = '';
+        }
+
+        function clearText() { canvas.getObjects('i-text').forEach(obj => canvas.remove(obj)); }
+
+        function fetchTemplates() {
+            fetch('https://api.imgflip.com/get_memes').then(res => res.json()).then(data => {
+                const list = document.getElementById('template-list');
+                data.data.memes.slice(0, 18).forEach(meme => {
+                    const img = document.createElement('img');
+                    img.src = meme.url; img.className = 'thumb';
+                    img.onclick = () => loadMeme(meme.url);
+                    list.appendChild(img);
+                });
+            });
+        }
+
+        function downloadMeme() {
+            const link = document.createElement('a');
+            link.download = 'LE-MEME.png';
+            link.href = canvas.toDataURL({ format: 'png', quality: 1.0 });
+            link.click();
+        }
+
+        function shareToX() {
+            const tweetText = encodeURIComponent(`💎💎 $LE 💎💎\n\nDYOR and Nfa\n\n${APE_LINK}`);
+            window.open(`https://twitter.com/intent/tweet?text=${tweetText}`, '_blank');
+        }
+
+        canvas.on('mouse:dblclick', (opt) => { if(opt.target && opt.target.type === 'i-text') canvas.remove(opt.target); });
+    </script>
+</body>
+</html>
 
